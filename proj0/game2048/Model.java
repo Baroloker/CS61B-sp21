@@ -2,10 +2,10 @@ package game2048;
 
 import java.util.Formatter;
 import java.util.Observable;
-
+import java.lang.instrument.Instrumentation;
 
 /** The state of a game of 2048.
- *  @author TODO: YOUR NAME HERE
+ *  @author Baroloker
  */
 public class Model extends Observable {
     /** Current contents of the board. */
@@ -114,6 +114,56 @@ public class Model extends Observable {
         // for the tilt to the Side SIDE. If the board changed, set the
         // changed local variable to true.
 
+        board.setViewingPerspective(side);
+
+        for (int col = 0; col < board.size(); col ++) {
+            for (int targetRow = board.size() - 1; targetRow >= 0; targetRow --) {
+                Tile target = board.tile(col, targetRow);
+                if (target == null) {
+                    for (int curRow = targetRow - 1; curRow >= 0; curRow --) {
+                        Tile cur = board.tile(col, curRow);
+                        if (cur != null) {
+                            board.move(col, targetRow, cur);
+                            changed = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        for (int col = 0; col < board.size(); col ++) {
+            for (int targetRow = board.size() - 1; targetRow >= 0; targetRow --) {
+                Tile target = board.tile(col, targetRow);
+                boolean reserve = false;
+                if (target != null) {
+                    for (int curRow = targetRow - 1; curRow >= 0; curRow --) {
+                        Tile cur = board.tile(col, curRow);
+                        if (cur != null) {
+                            if (target.value() == cur.value() && targetRow - curRow == 1) {
+                                board.move(col, targetRow, cur);
+                                score += 2 * cur.value();
+                                changed = true;
+                                targetRow = curRow;
+                                for (int behindRow = curRow - 1; behindRow >= 0; behindRow --) {
+                                    Tile behind = board.tile(col, behindRow);
+                                    if (behind != null) {
+                                        board.move(col, curRow, behind);
+                                        curRow = behindRow;
+                                    }
+                                }
+                                reserve = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (reserve == true) targetRow ++;
+            }
+        }
+
+        board.setViewingPerspective(Side.NORTH);
+
         checkGameOver();
         if (changed) {
             setChanged();
@@ -137,7 +187,13 @@ public class Model extends Observable {
      *  Empty spaces are stored as null.
      * */
     public static boolean emptySpaceExists(Board b) {
-        // TODO: Fill in this function.
+        for (int col = 0; col < b.size(); col ++) {
+            for (int row = 0; row < b.size(); row ++) {
+                if (b.tile(col, row) == null) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -147,7 +203,13 @@ public class Model extends Observable {
      * given a Tile object t, we get its value with t.value().
      */
     public static boolean maxTileExists(Board b) {
-        // TODO: Fill in this function.
+        for (int col = 0; col < b.size(); col ++) {
+            for (int row = 0; row < b.size(); row ++) {
+                if (b.tile(col, row) != null && b.tile(col, row).value() == MAX_PIECE) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -158,7 +220,25 @@ public class Model extends Observable {
      * 2. There are two adjacent tiles with the same value.
      */
     public static boolean atLeastOneMoveExists(Board b) {
-        // TODO: Fill in this function.
+        if (emptySpaceExists(b)) return true;
+        if (maxTileExists(b)) return true;
+        for (int col = 0; col < b.size(); col ++) {
+            for (int row = 0; row < b.size(); row ++) {
+                int baseNumber = b.tile(col, row).value();
+                if (col + 1 < b.size())
+                    if (b.tile(col + 1, row).value() == baseNumber)
+                        return true;
+                if (col - 1 > 0)
+                    if (b.tile(col - 1, row).value() == baseNumber)
+                        return true;
+                if (row + 1 < b.size())
+                    if (b.tile(col, row + 1).value() == baseNumber)
+                        return true;
+                if (row - 1 > 0)
+                    if (b.tile(col, row - 1).value() == baseNumber)
+                        return true;
+            }
+        }
         return false;
     }
 
